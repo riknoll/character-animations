@@ -36,6 +36,7 @@ enum Predicate {
     HittingWallLeft = 1 << 13,
 }
 
+//% color="#7d6282"
 namespace character {
     export type Rule = number;
 
@@ -74,7 +75,9 @@ namespace character {
      class CharacterState {
         protected animations: CharacterAnimation[];
         protected lastState: number;
-        protected current: CharacterAnimation
+        protected current: CharacterAnimation;
+        protected possibleFacingDirections: number;
+        protected enabled: boolean;
 
         protected timer: number;
         protected frame: number;
@@ -84,9 +87,12 @@ namespace character {
             this.timer = 0;
             this.frame = 0;
             this.lastState = Predicate.FacingRight;
+            this.possibleFacingDirections = 0;
+            this.enabled = true;
         }
 
         setFrames(frames: Image[], interval: number, rule: Rule) {
+            this.possibleFacingDirections |= (rule & FACING);
             for (const animation of this.animations) {
                 if (animation.rule === rule) {
                     animation.frames = frames;
@@ -104,17 +110,21 @@ namespace character {
                 state |= Predicate.Moving;
 
                 if (this.sprite.vx > 0) {
-                    state |= Predicate.FacingRight | Predicate.MovingRight;
+                    state |= (Predicate.FacingRight & this.possibleFacingDirections) | Predicate.MovingRight;
                 }
                 else if (this.sprite.vx < 0) {
-                    state |= Predicate.FacingLeft | Predicate.MovingLeft
+                    state |= (Predicate.FacingLeft & this.possibleFacingDirections) | Predicate.MovingLeft
                 }
 
                 if (this.sprite.vy > 0) {
-                    state |= Predicate.FacingDown | Predicate.MovingDown;
+                    state |= (Predicate.FacingDown & this.possibleFacingDirections) | Predicate.MovingDown;
                 }
                 else if (this.sprite.vy < 0) {
-                    state |= Predicate.FacingUp | Predicate.MovingUp
+                    state |= (Predicate.FacingUp & this.possibleFacingDirections) | Predicate.MovingUp
+                }
+
+                if (!(state & FACING)) {
+                    state |= (this.lastState & FACING)
                 }
             }
             else {
@@ -142,12 +152,12 @@ namespace character {
 
                 this.current = newAnimation;
 
-                if (this.current) {
+                if (this.current && this.enabled) {
                     this.sprite.setImage((this.current.frames[0]))
                 }
             }
 
-            if (!this.current) return;
+            if (!this.current || !this.enabled) return;
 
             this.timer += dt;
 
@@ -159,6 +169,14 @@ namespace character {
             }
         }
 
+        matchesRule(rule: Rule) {
+            return !!(this.lastState & rule);
+        }
+
+        setEnabled(enabled: boolean) {
+            this.enabled = enabled;
+        }
+
         protected pickRule(state: number) {
             this.lastState = state;
 
@@ -166,7 +184,7 @@ namespace character {
             // want to prioritize the current animation and then the rest
             // by the order they were added
             let best = this.current;
-            let bestScore = score(state, best.rule);
+            let bestScore = this.current && score(state, best.rule);
             let currentScore: number;
 
             for (const animation of this.animations) {
@@ -177,7 +195,7 @@ namespace character {
                 }
             }
 
-            if (bestScore === 0) return null;
+            if (bestScore === 0 || bestScore == undefined) return null;
             
             return best;
         }
@@ -213,20 +231,43 @@ namespace character {
 
     function score(state: number, rule: Rule) {
         let res = 0;
-        let index = 0;
         let check = state;
+
+        if ((state & rule) ^ rule) return 0;
+
         while (check) {
-            if ((state | (1 << index)) && (rule | (1 << index))) ++res;
-            ++index;
+            if (check & 1) ++res;
             check >>= 1;
         }
 
         return res;
     }
 
+    function getStateForSprite(sprite: Sprite, createIfNotFound: boolean) {
+        init();
+
+        if (!sprite) return undefined;
+
+        const sceneState = sceneStack[sceneStack.length - 1];
+        for (const state of sceneState.characters) {
+            if (state.sprite === sprite) {
+                return state;
+            }
+        }
+
+        if (createIfNotFound) {
+            const newState = new CharacterState(sprite);
+            sceneState.characters.push(newState);
+            return newState;
+        }
+        return undefined;
+    }
+
     //% blockId=character_loop_frames
     //% block="$sprite loop frames $frames $frameInterval when $rule"
-    //% frames.shadow=animation_editor
+    //% sprite.defl=mySprite
+    //% sprite.shadow=variables_get
+    //% frames.shadow=character_animation_editor
     //% frameInterval.shadow=timePicker
     //% rule.shadow=character_make_rule
     export function loopFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: Rule) {
@@ -234,24 +275,19 @@ namespace character {
         if (!sprite || !frames || !frames.length || !rule) return;
         if (Number.isNaN(frameInterval) || frameInterval < 5) frameInterval = 5;
 
-        const sceneState = sceneStack[sceneStack.length - 1];
-        if (!sceneState) return;
-
-        for (const state of sceneState.characters) {
-            if (state.sprite === sprite) {
-                state.setFrames(frames, frameInterval, rule);
-                return;
-            }
-        }
-
-        const newState = new CharacterState(sprite);
-        sceneState.characters.push(newState);
-        newState.setFrames(frames, frameInterval, rule);
+        const state = getStateForSprite(sprite, true);
+        state.setFrames(frames, frameInterval, rule);
     }
 
     //% blockId=character_make_rule
-    //% block="$p1 || and $p2 and $p3 and $p4"
-    export function rule(p1: Predicate, p2?: Predicate, p3?: Predicate, p4?: Predicate, p5?: Predicate): Rule {
+    //% block="$p1||and $p2 and $p3 and $p4 and $p5"
+    //% inlineInputMode=inline
+    //% p1.shadow=character_predicate
+    //% p2.shadow=character_predicate
+    //% p3.shadow=character_predicate
+    //% p4.shadow=character_predicate
+    //% p5.shadow=character_predicate
+    export function rule(p1: number, p2?: number, p3?: number, p4?: number, p5?: number): Rule {
         let rule = p1;
         if (p2) rule |= p2;
         if (p3) rule |= p3;
@@ -279,5 +315,44 @@ namespace character {
         }
 
         return rule;
+    }
+
+    //% blockId=character_is_facing
+    //% block="$sprite is $rule"
+    //% sprite.defl=mySprite
+    //% sprite.shadow=variables_get
+    //% rule.shadow=character_make_rule
+    export function matchesRule(sprite: Sprite, rule: Rule): boolean {
+        const state = getStateForSprite(sprite, false);
+        if (!state) return false;
+
+        return state.matchesRule(rule);
+    }
+
+    //% blockId=character_animation_enabled
+    //% block="$sprite enable character animations $enabled"
+    //% sprite.defl=mySprite
+    //% sprite.shadow=variables_get
+    export function setCharacterAnimationsEnabled(sprite: Sprite, enabled: boolean) {
+        const state = getStateForSprite(sprite, false);
+        if (!state) return;
+
+        state.setEnabled(enabled);
+    }
+
+    //% blockId=character_animation_editor block="$frames"
+    //% shim=TD_ID
+    //% frames.fieldEditor="animation"
+    //% frames.fieldOptions.decompileLiterals="true"
+    //% frames.fieldOptions.filter="!tile !dialog !background"
+    //% duplicateShadowOnDrag
+    export function _animationFrames(frames: Image[]) {
+        return frames
+    }
+
+    //% blockId=character_predicate block="$predicate"
+    //% shim=TD_ID
+    export function _predicate(predicate: Predicate): number {
+        return predicate
     }
 }
