@@ -1,0 +1,16 @@
+{
+    "name": "character-animations",
+    "dependencies": {
+        "device": "*"
+    },
+    "description": "",
+    "files": [
+        "main.blocks",
+        "main.ts",
+        "README.md"
+    ],
+    "preferredEditor": "tsprj",
+    "testFiles": [
+        "test.ts"
+    ]
+}
