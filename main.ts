@@ -1,11 +1,14 @@
 
 /**
- * These are redundant on purpose. We need to preserve the
- * number of predicates in a rule, so every predicate needs
- * to be unique
+ * Rules used to dictate when animations should be looped on
+ * a sprite.
  */
-
 enum Predicate {
+    // These are redundant on purpose. We need to preserve the
+    // number of predicates in a rule, so every predicate needs
+    // to be unique. We favor rules that use more predicates
+
+
     //% block="not moving"
     NotMoving = 1,
     //% block="moving"
@@ -263,6 +266,19 @@ namespace character {
         return undefined;
     }
 
+    /**
+     * Loops the passed frames on the sprite at the given interval whenver
+     * the specified rule is true for that sprite.
+     * 
+     * If more than one rule applies, the most specific rule will be used.
+     * If multiple rules are equally specific, the currently executing rule
+     * is favored (or one is chosen at random).
+     * 
+     * @param sprite    the sprite to animate
+     * @param frames    the images that make up that animation
+     * @param frameInterval the amount of time to spend on each frame in milliseconds
+     * @param rule      the rule that decides when this animation will play
+     */
     //% blockId=character_loop_frames
     //% block="$sprite loop frames $frames $frameInterval when $rule"
     //% sprite.defl=mySprite
@@ -279,6 +295,11 @@ namespace character {
         state.setFrames(frames, frameInterval, rule);
     }
 
+    /**
+     * Constructs a rule for checking the state of a sprite. Rules
+     * with more clauses will override rules with fewer clauses. Invalid
+     * rules (e.g. "moving left AND moving right") are ignored.
+     */
     //% blockId=character_make_rule
     //% block="$p1||and $p2 and $p3 and $p4 and $p5"
     //% inlineInputMode=inline
@@ -317,6 +338,14 @@ namespace character {
         return rule;
     }
 
+    /**
+     * Use to check the current state of a sprite. Be careful, sprites
+     * will only be facing a direction if they have an animation in
+     * that uses the "facingDirection" rule.
+     * 
+     * @param sprite    The sprite to check the state of
+     * @param rule      The rule to check
+     */
     //% blockId=character_is_facing
     //% block="$sprite is $rule"
     //% sprite.defl=mySprite
@@ -329,6 +358,14 @@ namespace character {
         return state.matchesRule(rule);
     }
 
+    /**
+     * Enable or disable all rule animations on the specified sprite.
+     * This is useful for temporarily turning off animations while
+     * another animation plays (e.g. an attack animation)
+     * 
+     * @param sprite    The sprite to enable/disable animations on
+     * @param enabled   True to enable, false to disable
+     */
     //% blockId=character_animation_enabled
     //% block="$sprite enable character animations $enabled"
     //% sprite.defl=mySprite
@@ -340,6 +377,11 @@ namespace character {
         state.setEnabled(enabled);
     }
 
+    /**
+     * A series of images that make up an animation.
+     * 
+     * @frames  An array of images
+     */
     //% blockId=character_animation_editor block="$frames"
     //% shim=TD_ID
     //% frames.fieldEditor="animation"
@@ -350,6 +392,9 @@ namespace character {
         return frames
     }
 
+    /**
+     * A clause for a sprite animation rule.
+     */
     //% blockId=character_predicate block="$predicate"
     //% shim=TD_ID
     export function _predicate(predicate: Predicate): number {
