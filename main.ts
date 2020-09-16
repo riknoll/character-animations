@@ -71,7 +71,12 @@ namespace character {
     }
 
     class CharacterAnimation {
-        constructor(public frames: Image[], public interval: number, public rule: Rule) {
+        startFrames: Image[];
+        loopFrames: Image[];
+        startInterval: number;
+        loopInterval: number;
+
+        constructor(public rule: Rule) {
         }
     }
 
@@ -81,6 +86,8 @@ namespace character {
         protected current: CharacterAnimation;
         protected possibleFacingDirections: number;
         protected enabled: boolean;
+
+        protected runningStartFrames: boolean;
 
         protected timer: number;
         protected frame: number;
@@ -94,16 +101,42 @@ namespace character {
             this.enabled = true;
         }
 
-        setFrames(frames: Image[], interval: number, rule: Rule) {
+        setFrames(loop: boolean, frames: Image[], interval: number, rule: Rule) {
             this.possibleFacingDirections |= (rule & FACING);
             for (const animation of this.animations) {
                 if (animation.rule === rule) {
-                    animation.frames = frames;
-                    animation.interval = interval;
+                    if (loop) {
+                        animation.loopFrames = frames;
+                        animation.loopInterval = interval;
+                    }
+                    else {
+                        animation.startFrames = frames;
+                        animation.startInterval = interval;
+                    }
                     return;
                 }
             }
-            this.animations.push(new CharacterAnimation(frames, interval, rule));
+
+            const anim = new CharacterAnimation(rule);
+
+            if (loop) {
+                anim.loopFrames = frames;
+                anim.loopInterval = interval;
+            }
+            else {
+                anim.startFrames = frames;
+                anim.startInterval = interval;
+            }
+
+            this.animations.push(anim);
+        }
+
+        setLoopFrames(frames: Image[], interval: number, rule: Rule) {
+            this.setFrames(true, frames, interval, rule);
+        }
+
+        setStartFrames(frames: Image[], interval: number, rule: Rule) {
+            this.setFrames(false, frames, interval, rule);
         }
 
         update(dt: number) {
@@ -153,10 +186,17 @@ namespace character {
                 this.frame = 0;
                 this.timer = 0;
 
+                this.runningStartFrames = !!(newAnimation && newAnimation.startFrames);
+
                 this.current = newAnimation;
 
                 if (this.current && this.enabled) {
-                    this.sprite.setImage((this.current.frames[0]))
+                    if (this.runningStartFrames) {
+                        this.sprite.setImage((this.current.startFrames[0]))
+                    }
+                    else {
+                        this.sprite.setImage((this.current.loopFrames[0]))
+                    }
                 }
             }
 
@@ -164,11 +204,31 @@ namespace character {
 
             this.timer += dt;
 
-            while (this.timer >= this.current.interval) {
-                this.timer -= this.current.interval;
-                this.frame = (this.frame + 1) % this.current.frames.length;
+            if (this.runningStartFrames) {
+                while (this.timer >= this.current.startInterval && this.runningStartFrames) {
+                    this.timer -= this.current.startInterval;
+                    this.frame++;
 
-                this.sprite.setImage(this.current.frames[this.frame])
+                    if (this.frame >= this.current.startFrames.length) {
+                        this.runningStartFrames = false;
+                        if (this.current.loopFrames) {
+                            this.sprite.setImage(this.current.loopFrames[0]);
+                            this.timer = 0;
+                            this.frame = 0;
+                        }
+                    }
+                    else {
+                        this.sprite.setImage(this.current.startFrames[this.frame])
+                    }
+                }
+            }
+            else if (this.current.loopFrames) {
+                while (this.timer >= this.current.loopInterval) {
+                    this.timer -= this.current.loopInterval;
+                    this.frame = (this.frame + 1) % this.current.loopFrames.length;
+
+                    this.sprite.setImage(this.current.loopFrames[this.frame])
+                }
             }
         }
 
@@ -267,7 +327,7 @@ namespace character {
     }
 
     /**
-     * Loops the passed frames on the sprite at the given interval whenver
+     * Loops the passed frames on the sprite at the given interval whenever
      * the specified rule is true for that sprite.
      * 
      * If more than one rule applies, the most specific rule will be used.
@@ -292,7 +352,37 @@ namespace character {
         if (Number.isNaN(frameInterval) || frameInterval < 5) frameInterval = 5;
 
         const state = getStateForSprite(sprite, true);
-        state.setFrames(frames, frameInterval, rule);
+        state.setLoopFrames(frames, frameInterval, rule);
+    }
+
+    /**
+     * Runs the passed frames on the sprite at the given interval whenever
+     * the specified rule begins to be true for that sprite. If there are loop
+     * frames for a rule, they will take effect after the run is complete.
+     * 
+     * If more than one rule applies, the most specific rule will be used.
+     * If multiple rules are equally specific, the currently executing rule
+     * is favored (or one is chosen at random).
+     * 
+     * @param sprite    the sprite to animate
+     * @param frames    the images that make up that animation
+     * @param frameInterval the amount of time to spend on each frame in milliseconds
+     * @param rule      the rule that decides when this animation will play
+     */
+    //% blockId=character_run_frames
+    //% block="$sprite run frames $frames $frameInterval when $rule becomes true"
+    //% sprite.defl=mySprite
+    //% sprite.shadow=variables_get
+    //% frames.shadow=character_animation_editor
+    //% frameInterval.shadow=timePicker
+    //% rule.shadow=character_make_rule
+    export function runFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: Rule) {
+        init();
+        if (!sprite || !frames || !frames.length || !rule) return;
+        if (Number.isNaN(frameInterval) || frameInterval < 5) frameInterval = 5;
+
+        const state = getStateForSprite(sprite, true);
+        state.setStartFrames(frames, frameInterval, rule);
     }
 
     /**
