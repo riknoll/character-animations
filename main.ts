@@ -87,6 +87,9 @@ namespace character {
         protected possibleFacingDirections: number;
         protected enabled: boolean;
 
+        protected lastX: number;
+        protected lastY: number;
+
         protected runningStartFrames: boolean;
 
         protected timer: number;
@@ -99,6 +102,8 @@ namespace character {
             this.lastState = Predicate.FacingRight;
             this.possibleFacingDirections = 0;
             this.enabled = true;
+            this.lastX = sprite.x;
+            this.lastY = sprite.y;
         }
 
         setFrames(loop: boolean, frames: Image[], interval: number, rule: Rule) {
@@ -163,6 +168,27 @@ namespace character {
                     state |= (this.lastState & FACING)
                 }
             }
+            else if (this.sprite.x != this.lastX || this.sprite.y != this.lastY) {
+                state |= Predicate.Moving;
+
+                if (this.sprite.x > this.lastX) {
+                    state |= (Predicate.FacingRight & this.possibleFacingDirections) | Predicate.MovingRight;
+                }
+                else if (this.sprite.x < this.lastX) {
+                    state |= (Predicate.FacingLeft & this.possibleFacingDirections) | Predicate.MovingLeft
+                }
+
+                if (this.sprite.y > this.lastY) {
+                    state |= (Predicate.FacingDown & this.possibleFacingDirections) | Predicate.MovingDown;
+                }
+                else if (this.sprite.y < this.lastY) {
+                    state |= (Predicate.FacingUp & this.possibleFacingDirections) | Predicate.MovingUp
+                }
+
+                if (!(state & FACING)) {
+                    state |= (this.lastState & FACING)
+                }
+            }
             else {
                 state |= Predicate.NotMoving;
                 state |= (this.lastState & FACING);
@@ -180,6 +206,9 @@ namespace character {
             if (this.sprite.isHittingTile(CollisionDirection.Left)) {
                 state |= Predicate.HittingWallLeft;
             }
+
+            this.lastX = this.sprite.x;
+            this.lastY = this.sprite.y;
 
             const newAnimation = this.pickRule(state);
             if (newAnimation !== this.current) {
