@@ -471,10 +471,49 @@ namespace character {
     //% sprite.shadow=variables_get
     //% rule.shadow=character_make_rule
     export function matchesRule(sprite: Sprite, rule: Rule): boolean {
-        const state = getStateForSprite(sprite, false);
-        if (!state) return false;
+        const existing = getStateForSprite(sprite, false);
+        if (existing) return existing.matchesRule(rule);
 
-        return state.matchesRule(rule);
+
+        // If this sprite isn't in the system, then do the best we can. Note that this
+        // logic is slightly different than the logic above because we do not have a list
+        // of possible facing directions to narrow by or a reliable last x/y or an existing
+        let state = 0;
+        if (sprite.vx | sprite.vy) {
+                state |= Predicate.Moving;
+
+                if (sprite.vx > 0) {
+                    state |= Predicate.FacingRight | Predicate.MovingRight;
+                }
+                else if (sprite.vx < 0) {
+                    state |= Predicate.FacingLeft | Predicate.MovingLeft
+                }
+
+                if (sprite.vy > 0) {
+                    state |= Predicate.FacingDown | Predicate.MovingDown;
+                }
+                else if (sprite.vy < 0) {
+                    state |= Predicate.FacingUp | Predicate.MovingUp
+                }
+            }
+            else {
+                state |= Predicate.NotMoving;
+            }
+
+            if (sprite.isHittingTile(CollisionDirection.Bottom)) {
+                state |= Predicate.HittingWallDown;
+            }
+            if (sprite.isHittingTile(CollisionDirection.Top)) {
+                state |= Predicate.HittingWallUp;
+            }
+            if (sprite.isHittingTile(CollisionDirection.Right)) {
+                state |= Predicate.HittingWallRight;
+            }
+            if (sprite.isHittingTile(CollisionDirection.Left)) {
+                state |= Predicate.HittingWallLeft;
+            }
+
+        return !((state & rule) ^ rule);
     }
 
     /**
