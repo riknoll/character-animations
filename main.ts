@@ -2,13 +2,12 @@
 /**
  * Rules used to dictate when animations should be looped on
  * a sprite.
+ * 
+ * These are redundant on purpose. We need to preserve the
+ * number of predicates in a rule, so every predicate needs
+ * to be unique. We favor rules that use more predicates
  */
 enum Predicate {
-    // These are redundant on purpose. We need to preserve the
-    // number of predicates in a rule, so every predicate needs
-    // to be unique. We favor rules that use more predicates
-
-
     //% block="not moving"
     NotMoving = 1,
     //% block="moving"
@@ -39,7 +38,7 @@ enum Predicate {
     HittingWallLeft = 1 << 13,
 }
 
-//% color="#7d6282"
+//% color="#7d6282" icon="\uf03d"
 namespace character {
     export type Rule = number;
 
@@ -95,6 +94,8 @@ namespace character {
         protected timer: number;
         protected frame: number;
 
+        protected manualFlags: number;
+
         constructor(public sprite: Sprite) {
             this.animations = [];
             this.timer = 0;
@@ -104,6 +105,7 @@ namespace character {
             this.enabled = true;
             this.lastX = sprite.x;
             this.lastY = sprite.y;
+            this.manualFlags = 0;
         }
 
         setFrames(loop: boolean, frames: Image[], interval: number, rule: Rule) {
@@ -210,7 +212,7 @@ namespace character {
             this.lastX = this.sprite.x;
             this.lastY = this.sprite.y;
 
-            const newAnimation = this.pickRule(state);
+            const newAnimation = this.pickRule(this.manualFlags || state);
             if (newAnimation !== this.current) {
                 this.frame = 0;
                 this.timer = 0;
@@ -262,11 +264,24 @@ namespace character {
         }
 
         matchesRule(rule: Rule) {
-            return !!(this.lastState & rule);
+            return !(((this.manualFlags || this.lastState) & rule) ^ rule);
         }
 
         setEnabled(enabled: boolean) {
             this.enabled = enabled;
+        }
+
+        setManualFlags(flags: Rule) {
+            // Check if invalid
+            flags = rule(flags);
+            if (!flags) return;
+
+            this.manualFlags = flags;
+        }  
+
+        clearState() {
+            this.manualFlags = 0;
+            this.lastState = 0;
         }
 
         protected pickRule(state: number) {
@@ -375,6 +390,8 @@ namespace character {
     //% frames.shadow=character_animation_editor
     //% frameInterval.shadow=timePicker
     //% rule.shadow=character_make_rule
+    //% weight=100
+    //% blockGap=8
     export function loopFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: Rule) {
         init();
         if (!sprite || !frames || !frames.length || !rule) return;
@@ -405,6 +422,7 @@ namespace character {
     //% frames.shadow=character_animation_editor
     //% frameInterval.shadow=timePicker
     //% rule.shadow=character_make_rule
+    //% weight=90
     export function runFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: Rule) {
         init();
         if (!sprite || !frames || !frames.length || !rule) return;
@@ -412,49 +430,6 @@ namespace character {
 
         const state = getStateForSprite(sprite, true);
         state.setStartFrames(frames, frameInterval, rule);
-    }
-
-    /**
-     * Constructs a rule for checking the state of a sprite. Rules
-     * with more clauses will override rules with fewer clauses. Invalid
-     * rules (e.g. "moving left AND moving right") are ignored.
-     */
-    //% blockId=character_make_rule
-    //% block="$p1||and $p2 and $p3 and $p4 and $p5"
-    //% inlineInputMode=inline
-    //% p1.shadow=character_predicate
-    //% p2.shadow=character_predicate
-    //% p3.shadow=character_predicate
-    //% p4.shadow=character_predicate
-    //% p5.shadow=character_predicate
-    export function rule(p1: number, p2?: number, p3?: number, p4?: number, p5?: number): Rule {
-        let rule = p1;
-        if (p2) rule |= p2;
-        if (p3) rule |= p3;
-        if (p4) rule |= p4;
-
-        // Check for invalid rules
-        if (
-            // Moving and not moving
-            (rule & Predicate.NotMoving) && (rule & MOVING) ||
-            // moving/facing left and right
-            (rule & (Predicate.MovingLeft | Predicate.FacingLeft)) && (rule & (Predicate.MovingRight | Predicate.FacingRight)) ||
-            // moving/facing up and down
-            (rule & (Predicate.MovingUp | Predicate.FacingUp)) && (rule & (Predicate.MovingDown | Predicate.FacingDown)) ||
-
-            // moving down and on ground
-            (rule & Predicate.MovingDown) && (rule & Predicate.HittingWallDown) ||
-            // moving up and on ceiling
-            (rule & Predicate.MovingUp) && (rule & Predicate.HittingWallUp) ||
-            // moving right and on right wall
-            (rule & Predicate.MovingRight) && (rule & Predicate.HittingWallRight) ||
-            // moving left and on left wall
-            (rule & Predicate.MovingLeft) && (rule & Predicate.HittingWallLeft)
-        ) {
-            return 0;
-        }
-
-        return rule;
     }
 
     /**
@@ -470,10 +445,10 @@ namespace character {
     //% sprite.defl=mySprite
     //% sprite.shadow=variables_get
     //% rule.shadow=character_make_rule
+    //% weight=80
     export function matchesRule(sprite: Sprite, rule: Rule): boolean {
         const existing = getStateForSprite(sprite, false);
         if (existing) return existing.matchesRule(rule);
-
 
         // If this sprite isn't in the system, then do the best we can. Note that this
         // logic is slightly different than the logic above because we do not have a list
@@ -528,11 +503,94 @@ namespace character {
     //% block="$sprite enable character animations $enabled"
     //% sprite.defl=mySprite
     //% sprite.shadow=variables_get
+    //% weight=70
+    //% blockGap=8
     export function setCharacterAnimationsEnabled(sprite: Sprite, enabled: boolean) {
         const state = getStateForSprite(sprite, false);
         if (!state) return;
 
         state.setEnabled(enabled);
+    }
+
+    /**
+     * Manually set the state of a sprite. This state will remain in
+     * effect until you call clear state or set the state to something else.
+     * Invalid states (i.e. "moving" and "not moving") are ignored.
+     * 
+     * @param sprite    The sprite to set the state of
+     * @param rule      The state to set on the sprite
+     */
+    //% blockId=character_animation_set_state
+    //% block="$sprite set state to $rule"
+    //% sprite.defl=mySprite
+    //% sprite.shadow=variables_get
+    //% rule.shadow=character_make_rule
+    //% weight=60
+    //% blockGap=8
+    export function setCharacterState(sprite: Sprite, rule: Rule) {
+        const state = getStateForSprite(sprite, true);
+        state.setManualFlags(rule);
+    }
+
+    /**
+     * Clear the current state of the sprite. This will also disable any
+     * manually set state and re-enable automatic state tracking.
+     * 
+     * @param sprite    The sprite to clear the state of
+     */
+    //% blockId=character_animation_clear_state
+    //% block="$sprite clear state"
+    //% sprite.defl=mySprite
+    //% sprite.shadow=variables_get
+    //% weight=50
+    export function clearCharacterState(sprite: Sprite) {
+        const state = getStateForSprite(sprite, false);
+        if (state) state.clearState();
+    }
+
+    /**
+     * Constructs a rule for checking the state of a sprite. Rules
+     * with more clauses will override rules with fewer clauses. Invalid
+     * rules (e.g. "moving left AND moving right") are ignored.
+     */
+    //% blockId=character_make_rule
+    //% block="$p1||and $p2 and $p3 and $p4 and $p5"
+    //% inlineInputMode=inline
+    //% p1.shadow=character_predicate
+    //% p2.shadow=character_predicate
+    //% p3.shadow=character_predicate
+    //% p4.shadow=character_predicate
+    //% p5.shadow=character_predicate
+    //% weight=40
+    //% blockGap=8
+    export function rule(p1: number, p2?: number, p3?: number, p4?: number, p5?: number): Rule {
+        let rule = p1;
+        if (p2) rule |= p2;
+        if (p3) rule |= p3;
+        if (p4) rule |= p4;
+
+        // Check for invalid rules
+        if (
+            // Moving and not moving
+            (rule & Predicate.NotMoving) && (rule & MOVING) ||
+            // moving/facing left and right
+            (rule & (Predicate.MovingLeft | Predicate.FacingLeft)) && (rule & (Predicate.MovingRight | Predicate.FacingRight)) ||
+            // moving/facing up and down
+            (rule & (Predicate.MovingUp | Predicate.FacingUp)) && (rule & (Predicate.MovingDown | Predicate.FacingDown)) ||
+
+            // moving down and on ground
+            (rule & Predicate.MovingDown) && (rule & Predicate.HittingWallDown) ||
+            // moving up and on ceiling
+            (rule & Predicate.MovingUp) && (rule & Predicate.HittingWallUp) ||
+            // moving right and on right wall
+            (rule & Predicate.MovingRight) && (rule & Predicate.HittingWallRight) ||
+            // moving left and on left wall
+            (rule & Predicate.MovingLeft) && (rule & Predicate.HittingWallLeft)
+        ) {
+            return 0;
+        }
+
+        return rule;
     }
 
     /**
@@ -546,6 +604,8 @@ namespace character {
     //% frames.fieldOptions.decompileLiterals="true"
     //% frames.fieldOptions.filter="!tile !dialog !background"
     //% duplicateShadowOnDrag
+    //% weight=30
+    //% blockGap=8
     export function _animationFrames(frames: Image[]) {
         return frames
     }
@@ -555,6 +615,7 @@ namespace character {
      */
     //% blockId=character_predicate block="$predicate"
     //% shim=TD_ID
+    //% weight=20
     export function _predicate(predicate: Predicate): number {
         return predicate
     }
