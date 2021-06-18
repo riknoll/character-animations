@@ -329,18 +329,19 @@ namespace character {
      function initScene() {
          sceneStack.push(new CharacterAnimationSceneState());
          const sceneState = sceneStack[sceneStack.length - 1];
-         game.onUpdate(function () {
+
+         game.currentScene().eventContext.registerFrameHandler(scene.ANIMATION_UPDATE_PRIORITY, function() {
              if (sceneState) {
                  sceneState.update();
              }
-         })
+         });
      }
 
     function score(state: number, rule: Rule) {
         let res = 0;
-        let check = state;
+        let check = state & rule;
 
-        if ((state & rule) ^ rule) return 0;
+        if (check ^ rule) return 0;
 
         while (check) {
             if (check & 1) ++res;
@@ -368,6 +369,54 @@ namespace character {
             return newState;
         }
         return undefined;
+    }
+
+    export function ruleToString(rule: Rule) {
+        let out = "";
+        if (rule & Predicate.NotMoving) {
+            out += "not-moving "
+        }   
+        if (rule & Predicate.Moving) {
+            out += "moving "
+        }
+        if (rule & Predicate.FacingUp) {
+            out += "facing-up "
+        }
+        if (rule & Predicate.FacingRight) {
+            out += "facing-right "
+        }
+        if (rule & Predicate.FacingDown) {
+            out += "facing-down "
+        }
+        if (rule & Predicate.FacingLeft) {
+            out += "facing-left "
+        }
+        if (rule & Predicate.MovingUp) {
+            out += "moving-up "
+        }
+        if (rule & Predicate.MovingRight) {
+            out += "moving-right "
+        }
+        if (rule & Predicate.MovingDown) {
+            out += "moving-down "
+        }
+        if (rule & Predicate.MovingLeft) {
+            out += "moving-left "
+        }
+        if (rule & Predicate.HittingWallUp) {
+            out += "hitting-wall-up "
+        }
+        if (rule & Predicate.HittingWallRight) {
+            out += "hitting-wall-right "
+        }
+        if (rule & Predicate.HittingWallDown) {
+            out += "hitting-wall-down "
+        }
+        if (rule & Predicate.HittingWallLeft) {
+            out += "hitting-wall-left "
+        }
+
+        return out.trim();
     }
 
     /**
