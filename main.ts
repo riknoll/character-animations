@@ -234,7 +234,32 @@ namespace character {
             if (!this.current || !this.enabled) return;
 
             this.timer += dt;
+            this.applyAnimation();
+        }
 
+        matchesRule(rule: Rule) {
+            return !(((this.manualFlags || this.lastState) & rule) ^ rule);
+        }
+
+        setEnabled(enabled: boolean) {
+            this.enabled = enabled;
+            if (enabled) this.applyAnimation();
+        }
+
+        setManualFlags(flags: Rule) {
+            // Check if invalid
+            flags = rule(flags);
+            if (!flags) return;
+
+            this.manualFlags = flags;
+        }  
+
+        clearState() {
+            this.manualFlags = 0;
+            this.lastState = 0;
+        }
+
+        protected applyAnimation() {
             if (this.runningStartFrames) {
                 while (this.timer >= this.current.startInterval && this.runningStartFrames) {
                     this.timer -= this.current.startInterval;
@@ -261,27 +286,6 @@ namespace character {
                     this.sprite.setImage(this.current.loopFrames[this.frame])
                 }
             }
-        }
-
-        matchesRule(rule: Rule) {
-            return !(((this.manualFlags || this.lastState) & rule) ^ rule);
-        }
-
-        setEnabled(enabled: boolean) {
-            this.enabled = enabled;
-        }
-
-        setManualFlags(flags: Rule) {
-            // Check if invalid
-            flags = rule(flags);
-            if (!flags) return;
-
-            this.manualFlags = flags;
-        }  
-
-        clearState() {
-            this.manualFlags = 0;
-            this.lastState = 0;
         }
 
         protected pickRule(state: number) {
