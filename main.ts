@@ -2,7 +2,7 @@
 /**
  * Rules used to dictate when animations should be looped on
  * a sprite.
- * 
+ *
  * These are redundant on purpose. We need to preserve the
  * number of predicates in a rule, so every predicate needs
  * to be unique. We favor rules that use more predicates
@@ -212,7 +212,7 @@ namespace character {
             this.lastX = this.sprite.x;
             this.lastY = this.sprite.y;
 
-            
+
 
             const newAnimation = this.pickRule(this.manualFlags || state);
             if (newAnimation !== this.current) {
@@ -278,7 +278,7 @@ namespace character {
                 else {
                     this.sprite.setImage(this.current.loopFrames[this.frame])
                 }
-            } 
+            }
         }
 
         setManualFlags(flags: Rule) {
@@ -287,7 +287,7 @@ namespace character {
             if (!flags) return;
 
             this.manualFlags = flags;
-        }  
+        }
 
         clearState() {
             this.manualFlags = 0;
@@ -313,7 +313,7 @@ namespace character {
             }
 
             if (bestScore === 0 || bestScore == undefined) return null;
-            
+
             return best;
         }
     }
@@ -385,7 +385,7 @@ namespace character {
         let out = "";
         if (rule & Predicate.NotMoving) {
             out += "not-moving "
-        }   
+        }
         if (rule & Predicate.Moving) {
             out += "moving "
         }
@@ -432,11 +432,11 @@ namespace character {
     /**
      * Loops the passed frames on the sprite at the given interval whenever
      * the specified rule is true for that sprite.
-     * 
+     *
      * If more than one rule applies, the most specific rule will be used.
      * If multiple rules are equally specific, the currently executing rule
      * is favored (or one is chosen at random).
-     * 
+     *
      * @param sprite    the sprite to animate
      * @param frames    the images that make up that animation
      * @param frameInterval the amount of time to spend on each frame in milliseconds
@@ -451,6 +451,7 @@ namespace character {
     //% rule.shadow=character_make_rule
     //% weight=100
     //% blockGap=8
+    //% help=github:character-animations/docs/loop-character-animation
     export function loopFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: Rule) {
         init();
         if (!sprite || !frames || !frames.length || !rule) return;
@@ -464,11 +465,11 @@ namespace character {
      * Runs the passed frames on the sprite at the given interval whenever
      * the specified rule begins to be true for that sprite. If there are loop
      * frames for a rule, they will take effect after the run is complete.
-     * 
+     *
      * If more than one rule applies, the most specific rule will be used.
      * If multiple rules are equally specific, the currently executing rule
      * is favored (or one is chosen at random).
-     * 
+     *
      * @param sprite    the sprite to animate
      * @param frames    the images that make up that animation
      * @param frameInterval the amount of time to spend on each frame in milliseconds
@@ -482,6 +483,7 @@ namespace character {
     //% frameInterval.shadow=timePicker
     //% rule.shadow=character_make_rule
     //% weight=90
+    //% help=github:character-animations/docs/run-character-animation
     export function runFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: Rule) {
         init();
         if (!sprite || !frames || !frames.length || !rule) return;
@@ -493,9 +495,9 @@ namespace character {
 
     /**
      * Use to check the current state of a sprite. Be careful, sprites
-     * will only be facing a direction if they have an animation in
-     * that uses the "facingDirection" rule.
-     * 
+     * will only be facing a direction if they have an animation
+     * that uses the one of the facing direction rules (e.g. FacingLeft, FacingUp, etc.).
+     *
      * @param sprite    The sprite to check the state of
      * @param rule      The rule to check
      */
@@ -505,6 +507,7 @@ namespace character {
     //% sprite.shadow=variables_get
     //% rule.shadow=character_make_rule
     //% weight=80
+    //% help=github:character-animations/docs/matches-rule
     export function matchesRule(sprite: Sprite, rule: Rule): boolean {
         const existing = getStateForSprite(sprite, false);
         if (existing) return existing.matchesRule(rule);
@@ -554,7 +557,7 @@ namespace character {
      * Enable or disable all rule animations on the specified sprite.
      * This is useful for temporarily turning off animations while
      * another animation plays (e.g. an attack animation)
-     * 
+     *
      * @param sprite    The sprite to enable/disable animations on
      * @param enabled   True to enable, false to disable
      */
@@ -564,6 +567,7 @@ namespace character {
     //% sprite.shadow=variables_get
     //% weight=70
     //% blockGap=8
+    //% help=github:character-animations/docs/set-character-animations-enabled
     export function setCharacterAnimationsEnabled(sprite: Sprite, enabled: boolean) {
         const state = getStateForSprite(sprite, false);
         if (!state) return;
@@ -575,7 +579,7 @@ namespace character {
      * Manually set the state of a sprite. This state will remain in
      * effect until you call clear state or set the state to something else.
      * Invalid states (i.e. "moving" and "not moving") are ignored.
-     * 
+     *
      * @param sprite    The sprite to set the state of
      * @param rule      The state to set on the sprite
      */
@@ -586,6 +590,7 @@ namespace character {
     //% rule.shadow=character_make_rule
     //% weight=60
     //% blockGap=8
+    //% help=github:character-animations/docs/set-character-state
     export function setCharacterState(sprite: Sprite, rule: Rule) {
         const state = getStateForSprite(sprite, true);
         state.setManualFlags(rule);
@@ -594,7 +599,7 @@ namespace character {
     /**
      * Clear the current state of the sprite. This will also disable any
      * manually set state and re-enable automatic state tracking.
-     * 
+     *
      * @param sprite    The sprite to clear the state of
      */
     //% blockId=character_animation_clear_state
@@ -602,6 +607,7 @@ namespace character {
     //% sprite.defl=mySprite
     //% sprite.shadow=variables_get
     //% weight=50
+    //% help=github:character-animations/docs/clear-character-state
     export function clearCharacterState(sprite: Sprite) {
         const state = getStateForSprite(sprite, false);
         if (state) state.clearState();
@@ -622,6 +628,7 @@ namespace character {
     //% p5.shadow=character_predicate
     //% weight=40
     //% blockGap=8
+    //% help=github:character-animations/docs/rule
     export function rule(p1: number, p2?: number, p3?: number, p4?: number, p5?: number): Rule {
         let rule = p1;
         if (p2) rule |= p2;
@@ -654,7 +661,7 @@ namespace character {
 
     /**
      * A series of images that make up an animation.
-     * 
+     *
      * @frames  An array of images
      */
     //% blockId=character_animation_editor block="$frames"
@@ -675,6 +682,7 @@ namespace character {
     //% blockId=character_predicate block="$predicate"
     //% shim=TD_ID
     //% weight=20
+    //% help=github:character-animations/docs/predicate
     export function _predicate(predicate: Predicate): number {
         return predicate
     }
