@@ -13,7 +13,7 @@ character.matchesRule(sprites.create(img`
 ## Parameters
 
 * **sprite**: a [sprite](/types/sprite) to check the state of
-* **rule**: a [rule](./rule) to validate against the state of the sprite
+* **rule**: a rule to validate against the state of the sprite
 
 ## Example #example
 

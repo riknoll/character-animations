@@ -1,7 +1,7 @@
 # set character state
 
 Manually sets the state of a [sprite](/types/sprite) to match the given rule.
-This state will stay until this function is called again or it is [cleared](./clear-character-state).
+This state will stay until this function is called again or it is cleared.
 Once state is cleared, it will go back to automatically updating.
 If the state is invalid (e.g. "Moving and NotMoving") then it will be ignored.
 
@@ -18,7 +18,7 @@ character.setCharacterState(sprites.create(img`
 ## Parameters
 
 * **sprite**: a [sprite](/types/sprite) to set the state of
-* **rule**: a [rule](./rule) that will be the sprite's new state
+* **rule**: a rule that will be the sprite's new state
 
 ## Example #example
 

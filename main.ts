@@ -446,7 +446,7 @@ namespace character {
     //% block="$sprite loop frames $frames $frameInterval when $rule"
     //% sprite.defl=mySprite
     //% sprite.shadow=variables_get
-    //% frames.shadow=character_animation_editor
+    //% frames.shadow=animation_editor
     //% frameInterval.shadow=timePicker
     //% rule.shadow=character_make_rule
     //% weight=100
@@ -479,7 +479,7 @@ namespace character {
     //% block="$sprite run frames $frames $frameInterval when $rule becomes true"
     //% sprite.defl=mySprite
     //% sprite.shadow=variables_get
-    //% frames.shadow=character_animation_editor
+    //% frames.shadow=animation_editor
     //% frameInterval.shadow=timePicker
     //% rule.shadow=character_make_rule
     //% weight=90
@@ -671,6 +671,7 @@ namespace character {
     //% frames.fieldOptions.filter="!tile !dialog !background"
     //% duplicateShadowOnDrag
     //% weight=30
+    //% deprecated=1
     //% blockGap=8
     export function _animationFrames(frames: Image[]) {
         return frames

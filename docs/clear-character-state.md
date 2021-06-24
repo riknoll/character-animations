@@ -1,7 +1,7 @@
 # clear character state
 
 Clears the current state of a [sprite](/types/sprite).
-If the state has been [manually set](./set-character-state), clearing the state will cause automatic state updates to start again.
+If the state has been manually set, clearing the state will cause automatic state updates to start again.
 This will also reset whatever direction the sprite is currently facing.
 
 ## Parameters

@@ -2,7 +2,7 @@
 
 Creates a rule that can be used to check the state of the sprite or control when animations on a sprite run.
 
-Rules are made of [predicates](./predicate), which are statements that describe how a sprite is currently acting.
+Rules are made of predicates, which are statements that describe how a sprite is currently acting.
 Every predicate in a rule must be true for that rule to match a sprite.
 Rules that are impossible, like "Moving and NotMoving", are always ignored.
 
@@ -13,7 +13,7 @@ character.rule(Predicate.NotMoving)
 
 ## Parameters
 
-* **predicate**: a [predicate](./predicate) that describes the state of the sprite
+* **predicate**: a predicate that describes the state of the sprite
 
 ## Rule Priority
 
